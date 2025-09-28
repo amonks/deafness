@@ -976,10 +976,32 @@
         // Update impulse response
         updateImpulseResponse();
 
+        // Auto-adjust filter gain to max(-46, average of audiogram points)
+        updateFilterGainFromAudiogram();
+
         // Update visualization if not playing
         if (!isPlaying) {
           updateFilterCurve();
         }
+      }
+
+      function updateFilterGainFromAudiogram() {
+        // Calculate average of audiogram points
+        let sum = 0;
+        frequencies.forEach((freq) => {
+          const slider = document.getElementById(`freq-${freq}`);
+          sum += parseFloat(slider.value);
+        });
+        const avg = sum / frequencies.length;
+
+        // Set filter gain to max(-46, -avg)
+        // Note: audiogram values are positive (dB loss), so we negate for gain
+        const targetGain = Math.max(-46, -avg);
+
+        // Update the slider and value
+        const gainSlider = document.getElementById("audio-gain");
+        gainSlider.value = targetGain;
+        updateAudioGain(gainSlider);
       }
 
       function updateFFTOffset(slider) {
@@ -1040,6 +1062,9 @@
 
         // Update impulse response
         updateImpulseResponse();
+
+        // Auto-adjust filter gain to max(-46, average of audiogram points)
+        updateFilterGainFromAudiogram();
 
         // Update visualization
         updateFilterCurve();
