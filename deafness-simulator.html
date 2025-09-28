@@ -1,0 +1,1509 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Deafness Simulator</title>
+    <script src="https://unpkg.com/tone@15.1.22/build/Tone.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+          sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 30px;
+        text-align: center;
+        color: white;
+      }
+
+      .header h1 {
+        font-size: 2.5em;
+        margin-bottom: 10px;
+      }
+
+      .header p {
+        opacity: 0.9;
+        font-size: 1.1em;
+      }
+
+      .main-content {
+        padding: 30px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+      }
+
+      @media (max-width: 900px) {
+        .main-content {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .section {
+        background: #f8f9fa;
+        padding: 25px;
+        border-radius: 15px;
+        border: 1px solid #e9ecef;
+      }
+
+      .section h2 {
+        color: #495057;
+        margin-bottom: 20px;
+        font-size: 1.5em;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .audiogram-inputs {
+        display: grid;
+        gap: 15px;
+      }
+
+      .freq-input-row {
+        display: grid;
+        grid-template-columns: 120px 1fr 60px;
+        gap: 15px;
+        align-items: center;
+      }
+
+      .freq-label {
+        font-weight: 600;
+        color: #6c757d;
+        text-align: right;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        height: 6px;
+        background: #dee2e6;
+        border-radius: 3px;
+        outline: none;
+        -webkit-appearance: none;
+      }
+
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        background: #667eea;
+        border-radius: 50%;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      input[type="range"]::-webkit-slider-thumb:hover {
+        background: #764ba2;
+        transform: scale(1.2);
+      }
+
+      input[type="range"]::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        background: #667eea;
+        border-radius: 50%;
+        cursor: pointer;
+        border: none;
+        transition: all 0.3s ease;
+      }
+
+      input[type="range"]::-moz-range-thumb:hover {
+        background: #764ba2;
+        transform: scale(1.2);
+      }
+
+      .db-value {
+        font-weight: 600;
+        color: #495057;
+        background: white;
+        padding: 5px 10px;
+        border-radius: 5px;
+        text-align: center;
+        border: 1px solid #dee2e6;
+        min-width: 70px;
+        white-space: nowrap;
+      }
+
+      .controls {
+        margin-top: 30px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .calibration-section {
+        background: #e3f2fd;
+        padding: 20px;
+        border-radius: 10px;
+        border: 1px solid #90caf9;
+        margin-bottom: 20px;
+      }
+
+      .calibration-section h3 {
+        color: #1976d2;
+        margin: 0 0 15px 0;
+        font-size: 1.2em;
+      }
+
+      .calibration-row {
+        display: grid;
+        grid-template-columns: 140px 1fr 80px;
+        gap: 15px;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      .calibration-label {
+        font-weight: 600;
+        color: #495057;
+        text-align: right;
+        font-size: 0.9em;
+      }
+
+      .calibration-value {
+        font-weight: 600;
+        color: #1976d2;
+        background: white;
+        padding: 5px 10px;
+        border-radius: 5px;
+        text-align: center;
+        border: 1px solid #90caf9;
+        min-width: 70px;
+        white-space: nowrap;
+      }
+
+      .file-input-wrapper {
+        position: relative;
+        overflow: hidden;
+        display: inline-block;
+        width: 100%;
+      }
+
+      .file-input-wrapper input[type="file"] {
+        position: absolute;
+        left: -9999px;
+      }
+
+      .file-input-label {
+        display: block;
+        padding: 12px 20px;
+        background: #667eea;
+        color: white;
+        border-radius: 8px;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.3s ease;
+        font-weight: 600;
+      }
+
+      .file-input-label:hover {
+        background: #764ba2;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+      }
+
+      .file-name {
+        margin-top: 10px;
+        padding: 10px;
+        background: white;
+        border-radius: 5px;
+        color: #495057;
+        text-align: center;
+        border: 1px solid #dee2e6;
+      }
+
+      .button-group {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+      }
+
+      button {
+        padding: 12px 20px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 1em;
+      }
+
+      .btn-play {
+        background: #28a745;
+        color: white;
+      }
+
+      .btn-play:hover:not(:disabled) {
+        background: #218838;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+      }
+
+      .btn-stop {
+        background: #dc3545;
+        color: white;
+      }
+
+      .btn-stop:hover:not(:disabled) {
+        background: #c82333;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+      }
+
+      .btn-toggle {
+        background: #667eea;
+        color: white;
+        grid-column: 1 / -1;
+      }
+
+      .btn-toggle:hover:not(:disabled) {
+        background: #764ba2;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+      }
+
+      .btn-toggle.active {
+        background: #ffc107;
+        color: #212529;
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      #filterChart {
+        width: 100%;
+        height: 400px;
+        background: white;
+        border-radius: 10px;
+        margin-top: 20px;
+      }
+
+      .status {
+        margin-top: 15px;
+        padding: 10px;
+        background: #d1ecf1;
+        border: 1px solid #bee5eb;
+        border-radius: 5px;
+        color: #0c5460;
+        text-align: center;
+        font-weight: 500;
+      }
+
+      .preset-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+
+      .btn-preset {
+        background: #6c757d;
+        color: white;
+        padding: 10px;
+        font-size: 0.9em;
+      }
+
+      .btn-preset:hover {
+        background: #5a6268;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(108, 117, 125, 0.4);
+      }
+
+      .btn-noise {
+        background: #17a2b8;
+        color: white;
+      }
+
+      .btn-noise:hover:not(:disabled) {
+        background: #138496;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(23, 162, 184, 0.4);
+      }
+
+      .instructions-panel {
+        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+        padding: 25px 30px;
+        border-bottom: 1px solid #e1bee7;
+      }
+
+      .instructions-panel h2 {
+        color: #5e35b1;
+        margin: 0 0 20px 0;
+        font-size: 1.4em;
+      }
+
+      .instructions-panel ol {
+        margin: 0;
+        padding-left: 25px;
+        color: #424242;
+        line-height: 1.8;
+      }
+
+      .instructions-panel li {
+        margin-bottom: 12px;
+      }
+
+      .instructions-panel li:last-child {
+        margin-bottom: 0;
+      }
+
+      .instructions-panel strong {
+        color: #5e35b1;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🎧 Deafness Simulator</h1>
+        <p>Experience how hearing loss affects audio perception</p>
+      </div>
+
+      <div class="instructions-panel">
+        <h2>📖 How to Use</h2>
+        <ol>
+          <li><strong>Start:</strong> Click "Play Noise" to begin</li>
+          <li>
+            <strong>Calibrate Reference:</strong> Drag "Graph Offset" until the
+            blue noise line aligns at 0 dB on the graph
+          </li>
+          <li>
+            <strong>Set Hearing Loss:</strong> Click "Mild Loss" (or input your
+            audiogram values manually)
+          </li>
+          <li>
+            <strong>Calibrate Filter:</strong> Drag "Filter Gain" until the
+            green curve matches the purple audiogram line
+          </li>
+          <li>
+            <strong>Experience:</strong> Toggle "Filter" ON/OFF to hear the
+            difference between normal hearing and hearing loss
+          </li>
+          <li>
+            <strong>Optional:</strong> Select and play an MP3 file to hear how
+            music/speech is affected
+          </li>
+        </ol>
+
+        <h2 style="margin-top: 25px">
+          🔄 How to Recalibrate After Changing Audiogram
+        </h2>
+        <ol>
+          <li>
+            <strong>Switch to Noise:</strong> If you're playing an MP3, stop it
+            and click "Play Noise" instead
+          </li>
+          <li>
+            <strong>Adjust Filter Gain:</strong> Use the "Filter Gain" slider to
+            align the green filtered response line with your new purple
+            audiogram curve on the graph
+          </li>
+          <li>
+            <strong>Verify Alignment:</strong> The green line should closely
+            follow the purple audiogram line across all frequencies for an
+            accurate hearing loss simulation
+          </li>
+          <li>
+            <strong>Resume Testing:</strong> Once aligned, you can switch back
+            to MP3 playback or continue with noise to experience the updated
+            hearing loss profile
+          </li>
+        </ol>
+      </div>
+
+      <div class="main-content">
+        <div class="section">
+          <h2>📊 Audiogram Input</h2>
+
+          <div class="preset-buttons">
+            <button class="btn-preset" onclick="loadPreset('normal')">
+              Normal Hearing
+            </button>
+            <button class="btn-preset" onclick="loadPreset('mild')">
+              Mild Loss
+            </button>
+            <button class="btn-preset" onclick="loadPreset('moderate')">
+              Moderate Loss
+            </button>
+            <button class="btn-preset" onclick="loadPreset('severe')">
+              Severe Loss
+            </button>
+          </div>
+
+          <div class="audiogram-inputs">
+            <div class="freq-input-row">
+              <span class="freq-label">250 Hz</span>
+              <input
+                type="range"
+                id="freq-250"
+                min="0"
+                max="120"
+                value="0"
+                oninput="updateValue(this)"
+              />
+              <span class="db-value" id="val-250">0 dB</span>
+            </div>
+            <div class="freq-input-row">
+              <span class="freq-label">500 Hz</span>
+              <input
+                type="range"
+                id="freq-500"
+                min="0"
+                max="120"
+                value="0"
+                oninput="updateValue(this)"
+              />
+              <span class="db-value" id="val-500">0 dB</span>
+            </div>
+            <div class="freq-input-row">
+              <span class="freq-label">1000 Hz</span>
+              <input
+                type="range"
+                id="freq-1000"
+                min="0"
+                max="120"
+                value="0"
+                oninput="updateValue(this)"
+              />
+              <span class="db-value" id="val-1000">0 dB</span>
+            </div>
+            <div class="freq-input-row">
+              <span class="freq-label">2000 Hz</span>
+              <input
+                type="range"
+                id="freq-2000"
+                min="0"
+                max="120"
+                value="0"
+                oninput="updateValue(this)"
+              />
+              <span class="db-value" id="val-2000">0 dB</span>
+            </div>
+            <div class="freq-input-row">
+              <span class="freq-label">3000 Hz</span>
+              <input
+                type="range"
+                id="freq-3000"
+                min="0"
+                max="120"
+                value="0"
+                oninput="updateValue(this)"
+              />
+              <span class="db-value" id="val-3000">0 dB</span>
+            </div>
+            <div class="freq-input-row">
+              <span class="freq-label">4000 Hz</span>
+              <input
+                type="range"
+                id="freq-4000"
+                min="0"
+                max="120"
+                value="0"
+                oninput="updateValue(this)"
+              />
+              <span class="db-value" id="val-4000">0 dB</span>
+            </div>
+            <div class="freq-input-row">
+              <span class="freq-label">6000 Hz</span>
+              <input
+                type="range"
+                id="freq-6000"
+                min="0"
+                max="120"
+                value="0"
+                oninput="updateValue(this)"
+              />
+              <span class="db-value" id="val-6000">0 dB</span>
+            </div>
+            <div class="freq-input-row">
+              <span class="freq-label">8000 Hz</span>
+              <input
+                type="range"
+                id="freq-8000"
+                min="0"
+                max="120"
+                value="0"
+                oninput="updateValue(this)"
+              />
+              <span class="db-value" id="val-8000">0 dB</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>🎵 Audio Controls</h2>
+
+          <div class="calibration-section">
+            <h3>📏 Calibration</h3>
+            <div class="calibration-row">
+              <span class="calibration-label">Graph Offset</span>
+              <input
+                type="range"
+                id="fft-offset"
+                min="-100"
+                max="100"
+                value="0"
+                step="1"
+                oninput="updateFFTOffset(this)"
+              />
+              <span class="calibration-value" id="fft-offset-value">0 dB</span>
+            </div>
+            <div class="calibration-row">
+              <span class="calibration-label">Filter Gain</span>
+              <input
+                type="range"
+                id="audio-gain"
+                min="-60"
+                max="60"
+                value="0"
+                step="1"
+                oninput="updateAudioGain(this)"
+              />
+              <span class="calibration-value" id="audio-gain-value">0 dB</span>
+            </div>
+          </div>
+
+          <div class="calibration-row" style="margin: 20px 0">
+            <span class="calibration-label">Output Volume</span>
+            <input
+              type="range"
+              id="master-volume"
+              min="-60"
+              max="20"
+              value="0"
+              step="1"
+              oninput="updateMasterVolume(this)"
+            />
+            <span class="calibration-value" id="master-volume-value">0 dB</span>
+          </div>
+
+          <div class="controls">
+            <div class="file-input-wrapper">
+              <label for="audioFile" class="file-input-label">
+                📁 Choose MP3 File
+              </label>
+              <input
+                type="file"
+                id="audioFile"
+                accept="audio/mp3,audio/mpeg"
+                onchange="handleFileSelect(event)"
+              />
+            </div>
+
+            <div id="fileName" class="file-name" style="display: none">
+              No file selected
+            </div>
+
+            <div class="button-group">
+              <button
+                id="playBtn"
+                class="btn-play"
+                onclick="playAudio()"
+                disabled
+              >
+                ▶️ Play MP3
+              </button>
+              <button id="noiseBtn" class="btn-noise" onclick="playNoise()">
+                📊 Play Noise
+              </button>
+              <button
+                id="stopBtn"
+                class="btn-stop"
+                onclick="stopAudio()"
+                disabled
+                style="grid-column: 1 / -1"
+              >
+                ⏹️ Stop
+              </button>
+              <button
+                id="toggleBtn"
+                class="btn-toggle"
+                onclick="toggleFilter()"
+              >
+                🔊 Filter: OFF
+              </button>
+            </div>
+          </div>
+
+          <div id="filterChart"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let player = null;
+      let whiteNoisePlayer = null;
+      let convolverNode = null;
+      let bypassGain = null;
+      let convolverGain = null;
+      let merger = null;
+      let filterEnabled = false;
+      let isPlaying = false;
+      const frequencies = [250, 500, 1000, 2000, 3000, 4000, 6000, 8000];
+
+      // Source mixing nodes
+      let mp3Gain = null;
+      let noiseGain = null;
+      let sourceMixer = null;
+
+      // Calibration values
+      let fftOffsetDB = 0; // Visual offset for graph only
+      let audioGainDB = 0; // Actual audio gain
+      let audioGainNode = null; // Gain node for audio output
+      let masterVolumeDB = 0; // Master volume control
+      let masterVolumeNode = null; // Master volume gain node
+
+      // Track which source is currently connected
+      let currentSource = null; // 'noise', 'mp3', or null
+
+      // Analysis nodes
+      let sourceAnalyser = null;
+      let outputAnalyser = null;
+      let animationFrame = null;
+
+      // Track if audio has been initialized
+      let audioInitialized = false;
+
+      // Initialize Tone.js and create audio graph
+      async function initAudio() {
+        if (audioInitialized) {
+          return; // Already initialized, don't recreate
+        }
+
+        await Tone.start();
+
+        // Create the audio graph structure
+        setupAudioGraph();
+
+        // Initialize white noise and connect to its gain node
+        createWhiteNoisePlayer();
+
+        // Initial update
+        updateFilterCurve();
+
+        audioInitialized = true;
+      }
+
+      let bypassConvolver = null; // Always uses "normal hearing" IR
+
+      function setupAudioGraph() {
+        // Create source mixing nodes
+        mp3Gain = new Tone.Gain(0); // Start with MP3 muted
+        noiseGain = new Tone.Gain(0); // Start with noise muted
+        sourceMixer = new Tone.Gain(1); // Mixer to combine sources
+
+        // Connect source gains to mixer
+        mp3Gain.connect(sourceMixer);
+        noiseGain.connect(sourceMixer);
+
+        // Create TWO convolvers - one for bypass, one for filter
+        bypassConvolver = new Tone.Convolver(); // Always "normal hearing"
+        convolverNode = new Tone.Convolver(); // User's audiogram settings
+
+        bypassGain = new Tone.Gain(1);
+
+        // Create audio gain node for calibration (only affects filtered audio)
+        audioGainNode = new Tone.Gain(1);
+
+        convolverGain = new Tone.Gain(0);
+
+        // Create merger to combine paths for audio output
+        merger = new Tone.Gain(1);
+
+        // Create master volume node (affects both paths, after merger)
+        masterVolumeNode = new Tone.Gain(1);
+
+        // Connect source mixer to both convolvers
+        sourceMixer.connect(bypassConvolver);
+        sourceMixer.connect(convolverNode);
+
+        // Connect the parallel paths through their convolvers
+        bypassConvolver.connect(bypassGain);
+
+        // Connect filtered path through gain node BEFORE convolverGain
+        convolverNode.connect(audioGainNode);
+        audioGainNode.connect(convolverGain);
+
+        // Connect to merger
+        bypassGain.connect(merger);
+        convolverGain.connect(merger);
+
+        // Connect merger through master volume to destination
+        merger.connect(masterVolumeNode);
+        masterVolumeNode.toDestination();
+
+        // Create analysers
+        sourceAnalyser = Tone.context.createAnalyser();
+        sourceAnalyser.fftSize = 2048;
+        sourceAnalyser.smoothingTimeConstant = 0.85;
+
+        outputAnalyser = Tone.context.createAnalyser();
+        outputAnalyser.fftSize = 2048;
+        outputAnalyser.smoothingTimeConstant = 0.85;
+
+        // Setup analysers for the convolvers
+        bypassAnalyser = Tone.context.createAnalyser();
+        bypassAnalyser.fftSize = 2048;
+        bypassAnalyser.smoothingTimeConstant = 0.85;
+        bypassConvolver.connect(bypassAnalyser);
+
+        filterAnalyser = Tone.context.createAnalyser();
+        filterAnalyser.fftSize = 2048;
+        filterAnalyser.smoothingTimeConstant = 0.85;
+        audioGainNode.connect(filterAnalyser);
+
+        // Connect output analyser to merger (before master volume)
+        merger.connect(outputAnalyser);
+
+        // Generate initial impulse responses
+        updateImpulseResponse();
+
+        // Set bypass convolver to always use normal hearing
+        const normalHearingIR = generateNormalHearingIR();
+        bypassConvolver.buffer = normalHearingIR;
+      }
+
+      function createWhiteNoisePlayer() {
+        // Create white noise using Tone.js Noise instrument
+        whiteNoisePlayer = new Tone.Noise("white");
+        whiteNoisePlayer.volume.value = -15;
+        whiteNoisePlayer.connect(noiseGain); // Permanently connected
+        whiteNoisePlayer.start(); // Always running, controlled by gain
+      }
+
+      function generateNormalHearingIR() {
+        // Generate a proper "flat" impulse response using the same algorithm
+        // but with all gains set to 1 (0 dB loss)
+        const sampleRate = Tone.context.sampleRate;
+        const fftSize = 2048;
+        const freqBins = fftSize / 2 + 1;
+        const realFreq = new Float32Array(freqBins);
+
+        // Set all frequencies to unity gain
+        for (let i = 0; i < freqBins; i++) {
+          realFreq[i] = 1.0;
+        }
+
+        // Perform inverse FFT to get impulse response
+        const impulseResponse = new Float32Array(fftSize);
+
+        // Use the same IDFT scaling as the main function
+        for (let n = 0; n < fftSize; n++) {
+          let sum = 0;
+          for (let k = 0; k < freqBins; k++) {
+            const angle = (2 * Math.PI * k * n) / fftSize;
+            // Use consistent scaling for all components
+            sum += realFreq[k] * Math.cos(angle);
+          }
+          // Scale by 1/N for proper IDFT
+          impulseResponse[n] = sum / freqBins;
+        }
+
+        // Shift to make causal
+        const shifted = new Float32Array(fftSize);
+        const shift = Math.floor(fftSize / 2);
+        for (let i = 0; i < fftSize; i++) {
+          shifted[i] = impulseResponse[(i + shift) % fftSize];
+        }
+
+        // Apply the same windowing
+        for (let i = 0; i < fftSize; i++) {
+          const alpha = 0.1;
+          const taperedLength = Math.floor((alpha * fftSize) / 2);
+          let window = 1;
+
+          if (i < taperedLength) {
+            window =
+              0.5 * (1 + Math.cos(Math.PI * ((2 * i) / (alpha * fftSize) - 1)));
+          } else if (i > fftSize - taperedLength) {
+            window =
+              0.5 *
+              (1 +
+                Math.cos(
+                  Math.PI * ((2 * (i - fftSize)) / (alpha * fftSize) + 1),
+                ));
+          }
+
+          shifted[i] *= window;
+        }
+
+        const audioBuffer = Tone.context.createBuffer(1, fftSize, sampleRate);
+        audioBuffer.copyToChannel(shifted, 0);
+        return audioBuffer;
+      }
+
+      function generateImpulseResponse() {
+        const sampleRate = Tone.context.sampleRate;
+        const fftSize = 2048;
+
+        // Generate the filter based on audiogram
+        const freqBins = fftSize / 2 + 1;
+        const realFreq = new Float32Array(freqBins);
+
+        // For each frequency bin, calculate the desired gain
+        for (let i = 0; i < freqBins; i++) {
+          const freq = (i * sampleRate) / (2 * (freqBins - 1));
+
+          // Find the gain for this frequency from the audiogram
+          let lossDB = 0;
+
+          if (freq <= frequencies[0]) {
+            lossDB = parseFloat(
+              document.getElementById(`freq-${frequencies[0]}`).value,
+            );
+          } else if (freq >= frequencies[frequencies.length - 1]) {
+            lossDB = parseFloat(
+              document.getElementById(
+                `freq-${frequencies[frequencies.length - 1]}`,
+              ).value,
+            );
+          } else {
+            // Interpolate between audiogram points
+            for (let j = 0; j < frequencies.length - 1; j++) {
+              if (freq >= frequencies[j] && freq <= frequencies[j + 1]) {
+                const f1 = frequencies[j];
+                const f2 = frequencies[j + 1];
+                const loss1 = parseFloat(
+                  document.getElementById(`freq-${f1}`).value,
+                );
+                const loss2 = parseFloat(
+                  document.getElementById(`freq-${f2}`).value,
+                );
+
+                // Logarithmic interpolation
+                const t = Math.log2(freq / f1) / Math.log2(f2 / f1);
+                lossDB = loss1 + (loss2 - loss1) * t;
+                break;
+              }
+            }
+          }
+
+          // Convert hearing loss to gain (loss is attenuation)
+          const gainDB = -lossDB;
+          const gainLinear = Math.pow(10, gainDB / 20);
+
+          realFreq[i] = gainLinear;
+        }
+
+        // Perform inverse FFT to get impulse response
+        const impulseResponse = new Float32Array(fftSize);
+
+        // Simple inverse DFT - keeping the scaling consistent
+        for (let n = 0; n < fftSize; n++) {
+          let sum = 0;
+          for (let k = 0; k < freqBins; k++) {
+            const angle = (2 * Math.PI * k * n) / fftSize;
+            // Use consistent scaling for all components
+            sum += realFreq[k] * Math.cos(angle);
+          }
+          // Scale by 1/N for proper IDFT
+          impulseResponse[n] = sum / freqBins;
+        }
+
+        // Shift to make causal
+        const shifted = new Float32Array(fftSize);
+        const shift = Math.floor(fftSize / 2);
+        for (let i = 0; i < fftSize; i++) {
+          shifted[i] = impulseResponse[(i + shift) % fftSize];
+        }
+
+        // Apply window to reduce artifacts
+        for (let i = 0; i < fftSize; i++) {
+          const alpha = 0.1;
+          const taperedLength = Math.floor((alpha * fftSize) / 2);
+          let window = 1;
+
+          if (i < taperedLength) {
+            window =
+              0.5 * (1 + Math.cos(Math.PI * ((2 * i) / (alpha * fftSize) - 1)));
+          } else if (i > fftSize - taperedLength) {
+            window =
+              0.5 *
+              (1 +
+                Math.cos(
+                  Math.PI * ((2 * (i - fftSize)) / (alpha * fftSize) + 1),
+                ));
+          }
+
+          shifted[i] *= window;
+        }
+
+        // Create audio buffer
+        const audioBuffer = Tone.context.createBuffer(1, fftSize, sampleRate);
+        audioBuffer.copyToChannel(shifted, 0);
+
+        return audioBuffer;
+      }
+
+      function updateImpulseResponse() {
+        if (convolverNode) {
+          const ir = generateImpulseResponse();
+          convolverNode.buffer = ir;
+        }
+      }
+
+      function updateValue(slider) {
+        const freq = slider.id.split("-")[1];
+        const valueSpan = document.getElementById(`val-${freq}`);
+        valueSpan.textContent = `${slider.value} dB`;
+
+        // Update impulse response
+        updateImpulseResponse();
+
+        // Update visualization if not playing
+        if (!isPlaying) {
+          updateFilterCurve();
+        }
+      }
+
+      function updateFFTOffset(slider) {
+        fftOffsetDB = parseFloat(slider.value);
+        const valueSpan = document.getElementById("fft-offset-value");
+        valueSpan.textContent = `${fftOffsetDB > 0 ? "+" : ""}${fftOffsetDB} dB`;
+
+        // Update visualization immediately if playing
+        if (isPlaying) {
+          updateFilterCurve();
+        }
+      }
+
+      function updateAudioGain(slider) {
+        audioGainDB = parseFloat(slider.value);
+        const valueSpan = document.getElementById("audio-gain-value");
+        valueSpan.textContent = `${audioGainDB > 0 ? "+" : ""}${audioGainDB} dB`;
+
+        // Apply gain to audio output
+        if (audioGainNode) {
+          const gainLinear = Math.pow(10, audioGainDB / 20);
+          audioGainNode.gain.rampTo(gainLinear, 0.05);
+        }
+
+        // Update visualization immediately if playing
+        if (isPlaying) {
+          updateFilterCurve();
+        }
+      }
+
+      function updateMasterVolume(slider) {
+        masterVolumeDB = parseFloat(slider.value);
+        const valueSpan = document.getElementById("master-volume-value");
+        valueSpan.textContent = `${masterVolumeDB > 0 ? "+" : ""}${masterVolumeDB} dB`;
+
+        // Apply master volume to audio output
+        if (masterVolumeNode) {
+          const gainLinear = Math.pow(10, masterVolumeDB / 20);
+          masterVolumeNode.gain.rampTo(gainLinear, 0.05);
+        }
+      }
+
+      function loadPreset(preset) {
+        const presets = {
+          normal: [0, 0, 0, 0, 0, 0, 0, 0],
+          mild: [15, 20, 25, 25, 30, 35, 40, 45],
+          moderate: [35, 40, 45, 50, 55, 60, 65, 70],
+          severe: [60, 65, 70, 75, 80, 85, 90, 95],
+        };
+
+        const values = presets[preset];
+        frequencies.forEach((freq, index) => {
+          const slider = document.getElementById(`freq-${freq}`);
+          const valueSpan = document.getElementById(`val-${freq}`);
+          slider.value = values[index];
+          valueSpan.textContent = `${values[index]} dB`;
+        });
+
+        // Update impulse response
+        updateImpulseResponse();
+
+        // Update visualization
+        updateFilterCurve();
+      }
+
+      function getSpectrumData() {
+        if (!bypassAnalyser || !filterAnalyser || !isPlaying) {
+          return null;
+        }
+
+        const bypassData = new Float32Array(bypassAnalyser.frequencyBinCount);
+        const filterData = new Float32Array(filterAnalyser.frequencyBinCount);
+
+        bypassAnalyser.getFloatFrequencyData(bypassData);
+        filterAnalyser.getFloatFrequencyData(filterData);
+
+        const sampleRate = Tone.context.sampleRate;
+        const nyquist = sampleRate / 2;
+
+        const freqs = [];
+        const sourceSpectrum = [];
+        const outputSpectrum = [];
+
+        for (let i = 0; i < bypassData.length; i++) {
+          const freq = (i / bypassData.length) * nyquist;
+          if (freq >= 20 && freq <= 20000) {
+            freqs.push(freq);
+            // Apply FFT offset (visual only) to both spectrums
+            // Normal hearing reference gets the visual offset
+            sourceSpectrum.push(bypassData[i] + 88 + fftOffsetDB);
+            // Filtered output gets both visual offset and audio gain
+            // (audio gain is already applied in the signal path)
+            outputSpectrum.push(filterData[i] + 88 + fftOffsetDB);
+          }
+        }
+
+        return { freqs, sourceSpectrum, outputSpectrum };
+      }
+
+      function updateFilterCurve() {
+        const losses = frequencies.map((freq) => {
+          const slider = document.getElementById(`freq-${freq}`);
+          return -parseFloat(slider.value);
+        });
+
+        // Generate frequency points for visualization
+        const curveFreqs = [];
+        const targetGains = [];
+
+        // Generate log-spaced frequency points
+        const numPoints = 200;
+        for (let i = 0; i < numPoints; i++) {
+          const logMin = Math.log10(20);
+          const logMax = Math.log10(20000);
+          const logFreq = logMin + (i / (numPoints - 1)) * (logMax - logMin);
+          curveFreqs.push(Math.pow(10, logFreq));
+        }
+
+        // Calculate target response from audiogram
+        for (let i = 0; i < curveFreqs.length; i++) {
+          const freq = curveFreqs[i];
+          let gain = 0;
+
+          if (freq <= frequencies[0]) {
+            gain = losses[0];
+          } else if (freq >= frequencies[frequencies.length - 1]) {
+            gain = losses[losses.length - 1];
+          } else {
+            for (let j = 0; j < frequencies.length - 1; j++) {
+              if (freq >= frequencies[j] && freq <= frequencies[j + 1]) {
+                const f1 = frequencies[j];
+                const f2 = frequencies[j + 1];
+                const g1 = losses[j];
+                const g2 = losses[j + 1];
+                const t = Math.log2(freq / f1) / Math.log2(f2 / f1);
+                gain = g1 + (g2 - g1) * t;
+                break;
+              }
+            }
+          }
+          targetGains.push(gain);
+        }
+
+        // Get live spectrum data
+        let sourceGains = [];
+        let outputGains = [];
+
+        if (isPlaying) {
+          const spectrumData = getSpectrumData();
+          if (spectrumData) {
+            // Interpolate spectrum data to match visualization frequencies
+            let specIdx = 0;
+            for (let i = 0; i < curveFreqs.length; i++) {
+              const targetFreq = curveFreqs[i];
+
+              while (
+                specIdx < spectrumData.freqs.length - 1 &&
+                spectrumData.freqs[specIdx + 1] < targetFreq
+              ) {
+                specIdx++;
+              }
+
+              if (specIdx >= spectrumData.freqs.length - 1) {
+                sourceGains.push(
+                  spectrumData.sourceSpectrum[
+                    spectrumData.sourceSpectrum.length - 1
+                  ],
+                );
+                outputGains.push(
+                  spectrumData.outputSpectrum[
+                    spectrumData.outputSpectrum.length - 1
+                  ],
+                );
+              } else if (specIdx === 0 && targetFreq < spectrumData.freqs[0]) {
+                sourceGains.push(spectrumData.sourceSpectrum[0]);
+                outputGains.push(spectrumData.outputSpectrum[0]);
+              } else {
+                const f1 = spectrumData.freqs[specIdx];
+                const f2 =
+                  spectrumData.freqs[
+                    Math.min(specIdx + 1, spectrumData.freqs.length - 1)
+                  ];
+
+                const s1 = spectrumData.sourceSpectrum[specIdx];
+                const s2 =
+                  spectrumData.sourceSpectrum[
+                    Math.min(
+                      specIdx + 1,
+                      spectrumData.sourceSpectrum.length - 1,
+                    )
+                  ];
+
+                const o1 = spectrumData.outputSpectrum[specIdx];
+                const o2 =
+                  spectrumData.outputSpectrum[
+                    Math.min(
+                      specIdx + 1,
+                      spectrumData.outputSpectrum.length - 1,
+                    )
+                  ];
+
+                if (f2 > f1) {
+                  const t = (targetFreq - f1) / (f2 - f1);
+                  sourceGains.push(s1 + (s2 - s1) * t);
+                  outputGains.push(o1 + (o2 - o1) * t);
+                } else {
+                  sourceGains.push(s1);
+                  outputGains.push(o1);
+                }
+              }
+            }
+          }
+        }
+
+        // Create traces for the graph
+        const sourceTrace = {
+          x: curveFreqs,
+          y: sourceGains,
+          type: "scatter",
+          mode: "lines",
+          name: "Normal Hearing Reference",
+          line: {
+            color: "#2196F3",
+            width: filterEnabled ? 1 : 2,
+            dash: filterEnabled ? "dash" : undefined,
+          },
+          showlegend: true,
+          visible: sourceGains.length > 0,
+        };
+
+        const outputTrace = {
+          x: curveFreqs,
+          y: outputGains,
+          type: "scatter",
+          mode: "lines",
+          name: "With Hearing Loss",
+          line: {
+            color: "#4CAF50",
+            width: filterEnabled ? 2 : 1,
+            dash: filterEnabled ? undefined : "dash",
+          },
+          showlegend: true,
+          visible: outputGains.length > 0,
+        };
+
+        const extendedFreqs = [
+          20,
+          50,
+          100,
+          200,
+          ...frequencies,
+          10000,
+          12000,
+          15000,
+          20000,
+        ];
+        const extendedLosses = [
+          losses[0],
+          losses[0],
+          losses[0],
+          losses[0],
+          ...losses,
+          losses[losses.length - 1],
+          losses[losses.length - 1],
+          losses[losses.length - 1],
+          losses[losses.length - 1],
+        ];
+
+        const lineTrace = {
+          x: extendedFreqs,
+          y: extendedLosses,
+          type: "scatter",
+          mode: "lines",
+          name: "Audiogram",
+          line: {
+            color: "#667eea",
+            width: 3,
+            shape: "spline",
+          },
+          showlegend: true,
+        };
+
+        const markerTrace = {
+          x: frequencies,
+          y: losses,
+          type: "scatter",
+          mode: "markers",
+          name: "Test Points",
+          marker: {
+            color: "#764ba2",
+            size: 10,
+          },
+          showlegend: false,
+        };
+
+        const layout = {
+          title: "Filter Response Curve",
+          xaxis: {
+            title: "Frequency (Hz)",
+            type: "log",
+            range: [Math.log10(20), Math.log10(20000)],
+            tickvals: [100, 250, 500, 1000, 2000, 4000, 8000, 16000],
+            gridcolor: "#e9ecef",
+          },
+          yaxis: {
+            title: isPlaying ? "Level (dB)" : "Gain (dB)",
+            autorange: false, // Manual range control
+            range: (() => {
+              // Default range
+              let minY = -140;
+              let maxY = 40;
+
+              // Check if we need to expand the range based on data
+              const allYValues = [];
+
+              // Collect all Y values from visible traces
+              if (isPlaying && sourceGains.length > 0) {
+                allYValues.push(...sourceGains, ...outputGains);
+              }
+              allYValues.push(...extendedLosses);
+
+              if (allYValues.length > 0) {
+                const dataMin = Math.min(...allYValues);
+                const dataMax = Math.max(...allYValues);
+
+                // Only expand range if data exceeds our minimum range
+                minY = Math.min(minY, dataMin - 5); // Add 5dB padding
+                maxY = Math.max(maxY, dataMax + 5); // Add 5dB padding
+              }
+
+              return [minY, maxY];
+            })(),
+            gridcolor: "#e9ecef",
+          },
+          paper_bgcolor: "#f8f9fa",
+          plot_bgcolor: "white",
+          font: {
+            family:
+              '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif',
+          },
+          legend: {
+            orientation: "h",
+            y: -0.2,
+            x: 0.5,
+            xanchor: "center",
+            yanchor: "top",
+          },
+          margin: {
+            l: 60,
+            r: 30,
+            t: 40,
+            b: 80,
+          },
+        };
+
+        const config = {
+          responsive: true,
+          displayModeBar: false,
+          displaylogo: false,
+        };
+
+        // Always show the audiogram line and markers, plus live traces when playing
+        const traces = isPlaying
+          ? [lineTrace, markerTrace, sourceTrace, outputTrace]
+          : [lineTrace, markerTrace];
+
+        Plotly.newPlot("filterChart", traces, layout, config);
+      }
+
+      async function handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const fileNameDiv = document.getElementById("fileName");
+        fileNameDiv.style.display = "block";
+        fileNameDiv.textContent = `Selected: ${file.name}`;
+
+        try {
+          // Initialize audio if not already done
+          if (!audioInitialized) {
+            await initAudio();
+          }
+
+          // Clean up old player if it exists
+          if (player) {
+            player.stop();
+            player.disconnect();
+            player.dispose();
+          }
+
+          const url = URL.createObjectURL(file);
+          player = new Tone.Player(url);
+
+          await player.load(url);
+
+          // Connect player to mp3Gain immediately
+          player.connect(mp3Gain);
+
+          document.getElementById("playBtn").disabled = false;
+        } catch (error) {
+          console.error("Error loading audio:", error);
+        }
+      }
+
+      let filterAnalyser = null;
+      let bypassAnalyser = null;
+
+      async function playNoise() {
+        // Initialize audio if not already done
+        if (!convolverNode) {
+          await initAudio();
+        }
+
+        // Turn on noise, turn off MP3
+        noiseGain.gain.rampTo(1, 0.05);
+        mp3Gain.gain.rampTo(0, 0.05);
+
+        currentSource = "noise";
+        isPlaying = true;
+
+        document.getElementById("noiseBtn").disabled = true;
+        document.getElementById("playBtn").disabled = player ? false : true;
+        document.getElementById("stopBtn").disabled = false;
+
+        startVisualization();
+      }
+
+      async function playAudio() {
+        if (!player) return;
+
+        // Ensure audio is initialized
+        if (!convolverNode) {
+          await initAudio();
+        }
+
+        // Stop and restart the MP3 player if needed
+        if (player.state === "started") {
+          player.stop();
+        }
+        player.start();
+
+        // Turn on MP3, turn off noise
+        mp3Gain.gain.rampTo(1, 0.05);
+        noiseGain.gain.rampTo(0, 0.05);
+
+        currentSource = "mp3";
+        isPlaying = true;
+
+        document.getElementById("playBtn").disabled = true;
+        document.getElementById("noiseBtn").disabled = false;
+        document.getElementById("stopBtn").disabled = false;
+
+        startVisualization();
+      }
+
+      function stopAudio() {
+        // Stop MP3 if playing
+        if (player && player.state === "started") {
+          player.stop();
+        }
+
+        // Mute both sources
+        mp3Gain.gain.rampTo(0, 0.05);
+        noiseGain.gain.rampTo(0, 0.05);
+
+        currentSource = null;
+        isPlaying = false;
+
+        if (animationFrame) {
+          cancelAnimationFrame(animationFrame);
+          animationFrame = null;
+        }
+
+        document.getElementById("playBtn").disabled = player ? false : true;
+        document.getElementById("noiseBtn").disabled = false;
+        document.getElementById("stopBtn").disabled = true;
+
+        // Final update to clear live traces
+        updateFilterCurve();
+      }
+
+      function startVisualization() {
+        if (animationFrame) {
+          cancelAnimationFrame(animationFrame);
+        }
+
+        function updateVis() {
+          if (isPlaying) {
+            updateFilterCurve();
+            animationFrame = requestAnimationFrame(updateVis);
+          }
+        }
+        updateVis();
+      }
+
+      function toggleFilter() {
+        filterEnabled = !filterEnabled;
+        const toggleBtn = document.getElementById("toggleBtn");
+
+        if (filterEnabled) {
+          toggleBtn.textContent = "🔇 Filter: ON (Audiogram)";
+          toggleBtn.classList.add("active");
+          // Switch audio output to audiogram convolver path
+          // But keep bypass path active for visualization
+          if (bypassGain && convolverGain) {
+            bypassGain.gain.rampTo(0, 0.05); // Mute bypass in output
+            convolverGain.gain.rampTo(1, 0.05); // Enable filtered in output
+          }
+        } else {
+          toggleBtn.textContent = "🔊 Filter: OFF (Normal)";
+          toggleBtn.classList.remove("active");
+          // Switch audio output to normal hearing convolver path
+          // But keep filtered path active for visualization
+          if (bypassGain && convolverGain) {
+            bypassGain.gain.rampTo(1, 0.05); // Enable bypass in output
+            convolverGain.gain.rampTo(0, 0.05); // Mute filtered in output
+          }
+        }
+      }
+
+      // Initialize visualization on page load
+      window.addEventListener("load", () => {
+        updateFilterCurve();
+      });
+    </script>
+  </body>
+</html>
